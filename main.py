@@ -555,7 +555,8 @@ impl std::fmt::Debug for {class_name} {{
                 constructor_params=self.generate_constructor_params(parsed_properties),
                 property_builders=self.generate_property_builders(parsed_properties),
                 additional_methods=self.generate_additional_methods(parsed_properties, parsed_signals),
-                debug_fields=self.generate_debug_fields(parsed_properties)
+                debug_fields=self.generate_debug_fields(parsed_properties),
+                parent_impls=self.generate_parent_impls(self.get_parent_hierarchy(parent_class), class_name)
             )
         except Exception as e:
             raise RuntimeError(f"Error generating code: {str(e)}")
