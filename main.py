@@ -13,22 +13,9 @@ from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum, auto
 
-class PropertyType(Enum):
-    STRING = auto()
-    INT32 = auto()
-    UINT32 = auto()
-    INT64 = auto()
-    UINT64 = auto()
-    FLOAT32 = auto()
-    FLOAT64 = auto()
-    BOOLEAN = auto()
-    OBJECT = auto()
-    CUSTOM = auto()  # For user-defined types
-
 @dataclass
 class Property:
     name: str
-    prop_type: PropertyType
     rust_type: str
     default_value: str
     nullable: bool = False
@@ -45,17 +32,17 @@ class RustGObjectGenerator:
     VALID_CLASSNAME = re.compile(r'^[A-Z][A-Za-z0-9]*$')
     
     TYPE_MAPPING = {
-        'string': (PropertyType.STRING, 'String'),
-        'str': (PropertyType.STRING, 'String'),
-        'i32': (PropertyType.INT32, 'i32'),
-        'u32': (PropertyType.UINT32, 'u32'),
-        'i64': (PropertyType.INT64, 'i64'),
-        'u64': (PropertyType.UINT64, 'u64'),
-        'f32': (PropertyType.FLOAT32, 'f32'),
-        'f64': (PropertyType.FLOAT64, 'f64'),
-        'bool': (PropertyType.BOOLEAN, 'bool'),
-        'boolean': (PropertyType.BOOLEAN, 'bool'),
-        'object': (PropertyType.OBJECT, 'glib::Object'),
+        'string': 'String',
+        'str': 'String',
+        'i32': 'i32',
+        'u32': 'u32',
+        'i64': 'i64',
+        'u64': 'u64',
+        'f32': 'f32',
+        'f64': 'f64',
+        'bool': 'bool',
+        'boolean': 'bool',
+        'object': 'glib::Object',
     }
 
     def __init__(self):
@@ -201,14 +188,13 @@ impl {class_name} {{
             
             # Handle built-in types
             type_str = type_str.lower()
-            prop_type, rust_type = self.TYPE_MAPPING[type_str]
+            rust_type = self.TYPE_MAPPING[type_str]
             
             if nullable:
                 rust_type = f'Option<{rust_type}>'
             
             return Property(
                 name=name,
-                prop_type=prop_type,
                 rust_type=rust_type,
                 default_value='None' if nullable else f'{rust_type}::default()',
                 nullable=nullable,
