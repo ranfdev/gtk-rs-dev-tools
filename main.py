@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import re
+import logging
 import gi
 gi.require_version('GIRepository', '2.0')
 from gi.repository import GIRepository
@@ -392,6 +393,9 @@ impl std::fmt::Debug for {class_name} {{
                      additional_imports: Optional[List[str]] = None) -> str:
         """Generate complete Rust code for the GObject class."""
         try:
+            logging.basicConfig(level=logging.DEBUG)
+            logger = logging.getLogger(__name__)
+            
             if not self.validate_class_name(class_name):
                 raise ValueError(f"Invalid class name: {class_name}")
 
@@ -400,7 +404,29 @@ impl std::fmt::Debug for {class_name} {{
             parsed_signals = [self.parse_signal(signal) for signal in signals]
 
             # Handle template file path
+            logger.debug(f"Original template_file: {template_file}")
             template_path = template_file.replace('\\', '\\\\') if template_file else ""
+            logger.debug(f"Processed template_path: {template_path}")
+
+            # Log all format parameters
+            format_params = {
+                'class_name': class_name,
+                'parent_class': parent_class,
+                'additional_imports': '\n'.join(additional_imports or []),
+                'template_file': template_path if template_path else "",
+                'template_children': self.generate_template_children(template_children or []),
+                'template_callbacks': self.generate_template_callbacks(template_callbacks or []),
+                'properties': self.generate_properties_code(parsed_properties),
+                'signals': self.generate_signals_code(parsed_signals),
+                'constructor_params': self.generate_constructor_params(parsed_properties),
+                'property_builders': self.generate_property_builders(parsed_properties),
+                'additional_methods': self.generate_additional_methods(parsed_properties, parsed_signals),
+                'debug_fields': self.generate_debug_fields(parsed_properties)
+            }
+            
+            logger.debug("Format parameters:")
+            for key, value in format_params.items():
+                logger.debug(f"{key}: {value}")
 
             # Generate the code
             return self.imp_template.format(
@@ -433,6 +459,13 @@ impl std::fmt::Debug for {class_name} {{
                         for p in properties)
 
 def main():
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+    
     parser = argparse.ArgumentParser(description='Create a new GObject class in Rust')
     parser.add_argument('class_name', help='The class name in PascalCase')
     parser.add_argument('parent_class', help='The parent class name')
@@ -451,6 +484,14 @@ def main():
     try:
         # Create generator instance
         generator = RustGObjectGenerator()
+        logger.debug(f"Generating code for class: {args.class_name}")
+        logger.debug(f"Parent class: {args.parent_class}")
+        logger.debug(f"Properties: {args.properties}")
+        logger.debug(f"Signals: {args.signals}")
+        logger.debug(f"Template file: {args.template}")
+        logger.debug(f"Template children: {args.template_children}")
+        logger.debug(f"Template callbacks: {args.template_callbacks}")
+        logger.debug(f"Additional imports: {args.imports}")
 
         # Generate the code
         rust_code = generator.generate_code(
