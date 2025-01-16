@@ -268,6 +268,29 @@ impl std::fmt::Debug for {class_name} {{
             
         return '\n'.join(signal_lines) if signal_lines else '                // No signals defined'
 
+    def generate_template_children(self, children: List[str]) -> str:
+        """Generate template children code."""
+        if not children:
+            return "        // No template children defined"
+            
+        lines = []
+        for child in children:
+            name, type_ = child.split(':')
+            lines.append(f'        #[template_child]\n        pub {name}: TemplateChild<{type_}>,')
+
+        return '\n'.join(lines)
+
+    def generate_template_callbacks(self, callbacks: List[str]) -> str:
+        """Generate template callback methods."""
+        if not callbacks:
+            return "        // No template callbacks defined"
+            
+        lines = []
+        for callback in callbacks:
+            lines.append(f'        #[template_callback]\n        {callback}')
+            
+        return '\n'.join(lines)
+
     def generate_additional_methods(self, properties: List[Property], signals: List[Signal]) -> str:
         """Generate additional helper methods."""
         methods = []
@@ -289,6 +312,9 @@ impl std::fmt::Debug for {class_name} {{
 
     def generate_code(self, class_name: str, parent_class: str, 
                      properties: List[str], signals: List[str], 
+                     template_file: Optional[str] = None,
+                     template_children: Optional[List[str]] = None,
+                     template_callbacks: Optional[List[str]] = None,
                      additional_imports: Optional[List[str]] = None) -> str:
         """Generate complete Rust code for the GObject class."""
         try:
@@ -304,6 +330,9 @@ impl std::fmt::Debug for {class_name} {{
                 class_name=class_name,
                 parent_class=parent_class,
                 additional_imports='\n'.join(additional_imports or []),
+                template_file=template_file or "template.ui",
+                template_children=self.generate_template_children(template_children or []),
+                template_callbacks=self.generate_template_callbacks(template_callbacks or []),
                 properties=self.generate_properties_code(parsed_properties),
                 signals=self.generate_signals_code(parsed_signals),
                 constructor_params=self.generate_constructor_params(parsed_properties),
