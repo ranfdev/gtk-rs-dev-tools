@@ -354,6 +354,30 @@ impl std::fmt::Debug for {class_name} {{
         self.emit_by_name::<()>("{signal.name}", &[]);
     }}''')
 
+        # Generate signal connection methods
+        for signal in signals:
+            # Build closure parameter types
+            param_types = []
+            for name, type_ in signal.params:
+                param_types.append(f'{name}: {type_}')
+            
+            # Add return type if present
+            return_type = signal.return_type or '()'
+            
+            # Build closure type
+            closure_type = f'Fn({", ".join(param_types)}) -> {return_type} + \'static'
+            
+            # Build method signature
+            methods.append(f'''    pub fn connect_{signal.name}<F: {closure_type}>(&self, f: F) -> glib::SignalHandlerId {{
+        self.connect_local("{signal.name}", false, move |values| {{
+            let obj = values[0].get::<Self>().expect("Failed to get self from values");
+            {'let ' if signal.params else ''}{', '.join(f'{name} = values[{i+1}].get().expect("Failed to get parameter")' 
+                for i, (name, _) in enumerate(signal.params))};
+            let result = f({', '.join(name for name, _ in signal.params)});
+            Some(result.to_value())
+        }})
+    }}''')
+
         return '\n\n'.join(methods)
 
     def print_widget_hierarchy(self, widget, indent=0):
