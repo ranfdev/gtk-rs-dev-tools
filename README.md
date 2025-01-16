@@ -45,44 +45,6 @@ A Python script to generate Rust code for GTK/GObject-based widgets with support
 | `--imports`          | Additional Rust imports                         |
 | `path`               | Output directory for generated files            |
 
-## Supported Property Types
-
-- `string`/`str` → `String`
-- `i32` → `i32`
-- `u32` → `u32`
-- `i64` → `i64`
-- `u64` → `u64`
-- `f32` → `f32`
-- `f64` → `f64`
-- `bool`/`boolean` → `bool`
-- `object` → `glib::Object`
-
-## Example
-
-Generate a custom button widget:
-```bash
-./main.py MyButton gtk::Button \
-    --properties "label:string" "active:bool" \
-    --signals "clicked" "toggled(active:bool)" \
-    --template my_button.ui \
-    --template-children "icon:gtk::Image" \
-    output_dir/
-```
-
-This will generate a `mybutton.rs` file with:
-- Properties for label and active state
-- Clicked and toggled signals
-- Template integration with icon child
-- Proper parent class hierarchy
-- Documentation and type safety
-
-## Requirements
-
-- Python 3.8+
-- GTK 4.0+
-- Rust toolchain (for compiling generated code)
-- GObject introspection
-
 ## License
 
 MIT License - See LICENSE file for details
