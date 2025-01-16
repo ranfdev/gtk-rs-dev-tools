@@ -129,7 +129,7 @@ mod imp {{
 
 glib::wrapper! {{
     pub struct {class_name}(ObjectSubclass<imp::{class_name}>)
-        @extends {', '.join(filter(None, self.get_parent_hierarchy(parent_class)))},
+        @extends ,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }}
 
