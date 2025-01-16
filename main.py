@@ -45,17 +45,17 @@ class RustGObjectGenerator:
     VALID_CLASSNAME = re.compile(r'^[A-Z][A-Za-z0-9]*$')
     
     TYPE_MAPPING = {
-        'string': (PropertyType.STRING, 'String', '""'),
-        'str': (PropertyType.STRING, 'String', '""'),
-        'i32': (PropertyType.INT32, 'i32', '0'),
-        'u32': (PropertyType.UINT32, 'u32', '0'),
-        'i64': (PropertyType.INT64, 'i64', '0'),
-        'u64': (PropertyType.UINT64, 'u64', '0'),
-        'f32': (PropertyType.FLOAT32, 'f32', '0.0'),
-        'f64': (PropertyType.FLOAT64, 'f64', '0.0'),
-        'bool': (PropertyType.BOOLEAN, 'bool', 'false'),
-        'boolean': (PropertyType.BOOLEAN, 'bool', 'false'),
-        'object': (PropertyType.OBJECT, 'glib::Object', 'None'),
+        'string': (PropertyType.STRING, 'String'),
+        'str': (PropertyType.STRING, 'String'),
+        'i32': (PropertyType.INT32, 'i32'),
+        'u32': (PropertyType.UINT32, 'u32'),
+        'i64': (PropertyType.INT64, 'i64'),
+        'u64': (PropertyType.UINT64, 'u64'),
+        'f32': (PropertyType.FLOAT32, 'f32'),
+        'f64': (PropertyType.FLOAT64, 'f64'),
+        'bool': (PropertyType.BOOLEAN, 'bool'),
+        'boolean': (PropertyType.BOOLEAN, 'bool'),
+        'object': (PropertyType.OBJECT, 'glib::Object'),
     }
 
     def __init__(self):
@@ -201,17 +201,16 @@ impl {class_name} {{
             
             # Handle built-in types
             type_str = type_str.lower()
-            prop_type, rust_type, default_value = self.TYPE_MAPPING[type_str]
+            prop_type, rust_type = self.TYPE_MAPPING[type_str]
             
             if nullable:
                 rust_type = f'Option<{rust_type}>'
-                default_value = 'None'
             
             return Property(
                 name=name,
                 prop_type=prop_type,
                 rust_type=rust_type,
-                default_value=default_value,
+                default_value='None' if nullable else f'{rust_type}::default()',
                 nullable=nullable,
                 doc=doc
             )
