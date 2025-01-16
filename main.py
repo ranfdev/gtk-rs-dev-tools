@@ -463,6 +463,7 @@ impl std::fmt::Debug for {class_name} {{
             return self.imp_template.format(
                 class_name=class_name,
                 parent_class=parent_class,
+                parent_hierarchy=parent_hierarchy,
                 additional_imports='\n'.join(additional_imports or []),
                 template_file=template_path if template_path else "",
                 template_children=self.generate_template_children(template_children or []),
