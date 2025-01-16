@@ -151,15 +151,7 @@ impl {class_name} {{
 
 {additional_methods}
 }}
-
-// Implement Debug trait
-impl std::fmt::Debug for {class_name} {{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {{
-        f.debug_struct("{class_name}")
-{debug_fields}
-            .finish()
-    }}
-}}'''
+'''
 
     def validate_class_name(self, name: str) -> bool:
         """Validate class name follows Rust naming conventions."""
@@ -375,7 +367,7 @@ impl std::fmt::Debug for {class_name} {{
             method_name = f"emit_{signal.name}"
             if params_str:
                 methods.append(f'''    pub fn {method_name}(&self, {params_str}) {{
-        self.emit_by_name::<()>("{signal.name}", &[{', '.join(n for n, _ in signal.params)}]);
+        self.emit_by_name::<()>("{signal.name}", &[{', '.join(f'&{n}' for n, _ in signal.params)}]);
     }}''')
             else:
                 methods.append(f'''    pub fn {method_name}(&self) {{
@@ -586,7 +578,6 @@ impl std::fmt::Debug for {class_name} {{
                 'constructor_params': self.generate_constructor_params(parsed_properties),
                 'property_builders': self.generate_property_builders(parsed_properties),
                 'additional_methods': self.generate_additional_methods(parsed_properties, parsed_signals),
-                'debug_fields': self.generate_debug_fields(parsed_properties),
                 'parent_impls': self.generate_parent_impls(self.get_parent_hierarchy(parent_class), class_name)
             }
             
@@ -608,7 +599,6 @@ impl std::fmt::Debug for {class_name} {{
                 constructor_params=self.generate_constructor_params(parsed_properties),
                 property_builders=self.generate_property_builders(parsed_properties),
                 additional_methods=self.generate_additional_methods(parsed_properties, parsed_signals),
-                debug_fields=self.generate_debug_fields(parsed_properties),
                 parent_impls=self.generate_parent_impls(self.get_parent_hierarchy(parent_class), class_name)
             )
         except Exception as e:
@@ -620,10 +610,6 @@ impl std::fmt::Debug for {class_name} {{
 
     def generate_property_builders(self, properties: List[Property]) -> str:
         return '\n'.join(f'            .property("{p.name}", {p.name})' 
-                        for p in properties)
-
-    def generate_debug_fields(self, properties: List[Property]) -> str:
-        return '\n'.join(f'            .field("{p.name}", &self.property::<{p.rust_type}>("{p.name}"))'
                         for p in properties)
 
     def generate_parent_impls(self, parent_hierarchy: List[str], class_name: str) -> str:
