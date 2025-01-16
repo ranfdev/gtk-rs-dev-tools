@@ -406,29 +406,26 @@ impl std::fmt::Debug for {class_name} {{
         return hierarchy
 
     def get_parent_hierarchy(self, parent_class: str) -> List[str]:
-        """Get the full parent hierarchy using Python's __bases__."""
+        """Get the full parent hierarchy using the simpler hierarchy function."""
         logger = logging.getLogger(__name__)
         
-        def get_bases(cls):
-            """Recursively get all base classes using __bases__."""
-            bases = []
-            for base in cls.__bases__:
-                if base.__module__.startswith('gi.repository.'):
-                    # Convert Python module path to Rust-style
-                    module_name = base.__module__.split('.')[-1].lower()
-                    if module_name == 'gtk':
-                        bases.append(f"gtk::{base.__name__}")
-                    elif module_name == 'gobject':
-                        bases.append(f"glib::{base.__name__}")
-                    else:
-                        bases.append(f"{module_name}::{base.__name__}")
-                    # Recursively get parent bases
-                    bases.extend(get_bases(base))
-            return bases
+        def hierarchy(cls, parents = []):
+            """Recursively get all parent classes until InitiallyUnowned."""
+            if cls == GObject.GInterface:
+                return False
+            if cls == GObject.InitiallyUnowned:
+                return True
+            parents.append(cls)
+            for b in cls.__bases__:
+                if hierarchy(b, parents):
+                    return True
+            parents.pop()
+            return False
 
         try:
             # Require GTK 4.0 before importing
             gi.require_version('Gtk', '4.0')
+            from gi.repository import GObject
             
             # Convert Rust-style type names to Python module paths
             if '::' in parent_class:
@@ -455,21 +452,23 @@ impl std::fmt::Debug for {class_name} {{
             module = __import__(import_path, fromlist=[classname])
             widget_class = getattr(module, classname)
             
-            # Get the hierarchy using __bases__
-            rust_module = parent_class.split('::')[0]  # Get the rust module name
-            hierarchy = [f"{rust_module}::{classname}"]
-            hierarchy.extend(get_bases(widget_class))
+            # Get the hierarchy using the new function
+            parents = []
+            hierarchy(widget_class, parents)
             
-            # Remove duplicates while preserving order
-            seen = set()
-            unique_hierarchy = []
-            for cls in hierarchy:
-                if cls not in seen:
-                    unique_hierarchy.append(cls)
-                    seen.add(cls)
+            # Convert to Rust-style module::Class format
+            rust_hierarchy = []
+            for cls in parents:
+                module_name = cls.__module__.split('.')[-1].lower()
+                if module_name == 'gtk':
+                    rust_hierarchy.append(f"gtk::{cls.__name__}")
+                elif module_name == 'gobject':
+                    rust_hierarchy.append(f"glib::{cls.__name__}")
+                else:
+                    rust_hierarchy.append(f"{module_name}::{cls.__name__}")
             
-            logger.debug(f"Generated hierarchy for {parent_class}: {unique_hierarchy}")
-            return unique_hierarchy
+            logger.debug(f"Generated hierarchy for {parent_class}: {rust_hierarchy}")
+            return rust_hierarchy
             
         except Exception as e:
             logger.error(f"Error getting hierarchy for {parent_class}: {str(e)}")
