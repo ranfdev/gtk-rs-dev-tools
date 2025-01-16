@@ -582,7 +582,7 @@ impl std::fmt::Debug for {class_name} {{
             # Extract the type name without module
             type_name = parent.split('::')[-1]
             
-            impl = f'''    impl {type_name}Impl for {type_name} {{
+            impl = f'''    impl {type_name}Impl for {class_name} {{
         // Default implementations that forward to parent
     }}'''
             impls.append(impl)
