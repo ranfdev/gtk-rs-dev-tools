@@ -380,10 +380,8 @@ impl std::fmt::Debug for {class_name} {{
 
         # Generate signal connection methods
         for signal in signals:
-            # Build closure parameter types
-            param_types = []
-            for name, type_ in signal.params:
-                param_types.append(f'{name}: {type_}')
+            # Build closure parameter types (without names)
+            param_types = [type_ for _, type_ in signal.params]
             
             # Add return type if present
             return_type = signal.return_type or '()'
