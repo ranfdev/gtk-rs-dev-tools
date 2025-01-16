@@ -424,15 +424,24 @@ impl std::fmt::Debug for {class_name} {{
                 try:
                     # Get the parent type
                     if not hasattr(current, 'get_parent'):
+                        logger.debug("Current type has no get_parent method")
                         break
                         
+                    logger.debug("Getting parent type...")
                     parent_type = current.get_parent()
                     if not parent_type:
+                        logger.debug("No parent type found")
                         break
                         
+                    logger.debug(f"Parent type: {parent_type}")
+                    logger.debug(f"Parent namespace: {parent_type.get_namespace()}")
+                    logger.debug(f"Parent name: {parent_type.get_name()}")
+                    
                     # Get the parent info
+                    logger.debug("Looking up parent info...")
                     parent_info = repo.find_by_name(parent_type.get_namespace(), parent_type.get_name())
                     if not parent_info:
+                        logger.debug("Could not find parent info in repository")
                         break
                         
                     # Add to hierarchy
@@ -441,10 +450,14 @@ impl std::fmt::Debug for {class_name} {{
                     if namespace and name:
                         logger.debug(f"Found parent: {namespace}.{name}")
                         hierarchy.append(f'{namespace}.{name}')
+                    else:
+                        logger.debug("Parent has no namespace or name")
                         
                     current = parent_info
+                    logger.debug(f"Moving to parent: {namespace}.{name}")
                 except Exception as e:
                     logger.debug(f"Error walking hierarchy: {str(e)}")
+                    logger.debug("Exception details:", exc_info=True)
                     break
             
             # Convert to Rust-style type names and filter out empty values
