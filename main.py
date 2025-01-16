@@ -327,13 +327,32 @@ impl std::fmt::Debug for {class_name} {{
         return '\n'.join(lines)
 
     def generate_template_callbacks(self, callbacks: List[str]) -> str:
-        """Generate template callback methods."""
+        """Generate template callback methods with signal-like syntax."""
         if not callbacks:
             return "        // No template callbacks defined"
             
         lines = []
         for callback in callbacks:
-            lines.append(f'        #[template_callback]\n        {callback}')
+            try:
+                # Parse using the same logic as signals
+                signal = self.parse_signal(callback)
+                
+                # Build parameter string
+                params_str = ', '.join(f'{name}: {type_}' for name, type_ in signal.params)
+                
+                # Build return type
+                return_type = f' -> {signal.return_type}' if signal.return_type else ''
+                
+                # Build method body
+                method_body = f'fn {signal.name}(&self, {params_str}){return_type} {{\n'
+                method_body += '        // TODO: Implement callback\n'
+                method_body += '    }'
+                
+                lines.append(f'        #[template_callback]\n        {method_body}')
+                
+            except ValueError as e:
+                # Fall back to simple callback if parsing fails
+                lines.append(f'        #[template_callback]\n        {callback}')
             
         return '\n'.join(lines)
 
