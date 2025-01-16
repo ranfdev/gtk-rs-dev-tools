@@ -298,24 +298,24 @@ impl std::fmt::Debug for {class_name} {{
             builder = f'Signal::builder("{signal.name}")'
             
             if signal.params:
-                # Map Rust types to GLib static types
+                # Map Rust types to SignalType
                 type_map = {
-                    'String': 'glib::Type::STRING',
-                    'i32': 'glib::Type::INT',
-                    'u32': 'glib::Type::UINT',
-                    'i64': 'glib::Type::INT64',
-                    'u64': 'glib::Type::UINT64',
-                    'f32': 'glib::Type::FLOAT',
-                    'f64': 'glib::Type::DOUBLE',
-                    'bool': 'glib::Type::BOOLEAN',
-                    'glib::Object': 'glib::Type::OBJECT',
+                    'String': 'glib::SignalType::String',
+                    'i32': 'glib::SignalType::Int',
+                    'u32': 'glib::SignalType::UInt',
+                    'i64': 'glib::SignalType::Int64',
+                    'u64': 'glib::SignalType::UInt64',
+                    'f32': 'glib::SignalType::Float',
+                    'f64': 'glib::SignalType::Double',
+                    'bool': 'glib::SignalType::Boolean',
+                    'glib::Object': 'glib::SignalType::Object',
                 }
                 
                 params_str = ', '.join(
-                    f'(glib::ParamSpec::new("{name}", "{name}", "{name}", {type_map.get(type_, "glib::Type::OBJECT")}, glib::ParamFlags::READWRITE))'
-                    for name, type_ in signal.params
+                    f'{type_map.get(type_, "glib::SignalType::Object")}'
+                    for _, type_ in signal.params
                 )
-                builder += f'\n                    .param_types([{params_str}])'
+                builder += f'\n                    .param_types(&[{params_str}])'
             
             if signal.return_type:
                 builder += f'\n                    .return_type::<{signal.return_type}>()'
