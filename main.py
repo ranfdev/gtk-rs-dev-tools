@@ -397,9 +397,8 @@ impl {class_name} {{
             methods.append(f'''    pub fn connect_{signal.name}<F: {closure_type}>(&self, f: F) -> glib::SignalHandlerId {{
         self.connect_local("{signal.name}", false, move |values| {{
             {''.join(f'{line}\n            ' for line in param_lines)}
-            let result = f({', '.join(name for name, _ in signal.params)});
-            {'' if return_type == '()' else 'Some(result.to_value())'}
-            {'' if return_type != '()' else 'None'}
+            {f'let result = f({", ".join(name for name, _ in signal.params)});' if return_type != '()' else f'f({", ".join(name for name, _ in signal.params)});'}
+            {f'Some(result.to_value())' if return_type != '()' else 'None'}
         }})
     }}''')
 
