@@ -129,7 +129,7 @@ mod imp {{
 
 glib::wrapper! {{
     pub struct {class_name}(ObjectSubclass<imp::{class_name}>)
-        @extends ,
+        @extends {parent_hierarchy},
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }}
 
@@ -435,10 +435,14 @@ impl std::fmt::Debug for {class_name} {{
             template_path = template_file.replace('\\', '\\\\') if template_file else ""
             logger.debug(f"Processed template_path: {template_path}")
 
+            # Generate parent hierarchy string
+            parent_hierarchy = ', '.join(filter(None, self.get_parent_hierarchy(parent_class)))
+            
             # Log all format parameters
             format_params = {
                 'class_name': class_name,
                 'parent_class': parent_class,
+                'parent_hierarchy': parent_hierarchy,
                 'additional_imports': '\n'.join(additional_imports or []),
                 'template_file': template_path if template_path else "",
                 'template_children': self.generate_template_children(template_children or []),
