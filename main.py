@@ -456,16 +456,21 @@ impl std::fmt::Debug for {class_name} {{
             parents = []
             hierarchy(widget_class, parents)
             
-            # Convert to Rust-style module::Class format
+            # Convert to Rust-style module::Class format and remove duplicates
             rust_hierarchy = []
+            seen = set()
             for cls in parents:
                 module_name = cls.__module__.split('.')[-1].lower()
                 if module_name == 'gtk':
-                    rust_hierarchy.append(f"gtk::{cls.__name__}")
+                    rust_class = f"gtk::{cls.__name__}"
                 elif module_name == 'gobject':
-                    rust_hierarchy.append(f"glib::{cls.__name__}")
+                    rust_class = f"glib::{cls.__name__}"
                 else:
-                    rust_hierarchy.append(f"{module_name}::{cls.__name__}")
+                    rust_class = f"{module_name}::{cls.__name__}"
+                
+                if rust_class not in seen:
+                    rust_hierarchy.append(rust_class)
+                    seen.add(rust_class)
             
             logger.debug(f"Generated hierarchy for {parent_class}: {rust_hierarchy}")
             return rust_hierarchy
