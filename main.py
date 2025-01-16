@@ -389,8 +389,8 @@ impl {class_name} {{
             methods.append(f'''    pub fn connect_{signal.name}<F: {closure_type}>(&self, f: F) -> glib::SignalHandlerId {{
         self.connect_local("{signal.name}", false, move |values| {{
             let obj = values[0].get::<Self>().expect("Failed to get self from values");
-            {'let ' if signal.params else ''}{', '.join(f'{name} = values[{i+1}].get().expect("Failed to get parameter")' 
-                for i, (name, _) in enumerate(signal.params))};
+            {'let ' if signal.params else ''}{', '.join(f'{name} = values[{i+1}].get::<{type_}>().expect("Failed to get parameter {name}")' 
+                for i, (name, type_) in enumerate(signal.params))};
             let result = f({', '.join(name for name, _ in signal.params)});
             {'' if return_type == '()' else 'Some(result.to_value())'}
             {'' if return_type != '()' else 'None'}
