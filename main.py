@@ -406,19 +406,15 @@ impl std::fmt::Debug for {class_name} {{
         return hierarchy
 
     def get_parent_hierarchy(self, parent_class: str) -> List[str]:
-        """Get the full parent hierarchy using gobject-introspection."""
+        """Get the full parent hierarchy using Python's MRO."""
         logger = logging.getLogger(__name__)
-        repo = GIRepository.Repository.get_default()
         
-        # Try to find the parent class in GIRepository
         try:
-            logger.debug(f"Starting gobject-introspection for {parent_class}")
-            
-            # Handle Rust-style type names (gtk::TextView -> Gtk.TextView)
+            # Convert Rust-style type names to Python module paths
             if '::' in parent_class:
-                namespace, classname = parent_class.split('::', 1)
-                # Convert Rust namespace to GObject namespace
-                namespace = {
+                module, classname = parent_class.split('::', 1)
+                # Map Rust module names to Python modules
+                module_map = {
                     'gtk': 'Gtk',
                     'glib': 'GLib',
                     'gio': 'Gio',
@@ -427,52 +423,44 @@ impl std::fmt::Debug for {class_name} {{
                     'gsk': 'Gsk',
                     'pango': 'Pango',
                     'cairo': 'cairo',
-                }.get(namespace.lower(), namespace)
-                
-                logger.debug(f"Converted Rust type {parent_class} to GObject type {namespace}.{classname}")
-                repo.require(namespace, None, 0)
+                }
+                module = module_map.get(module.lower(), module)
+                import_path = f"gi.repository.{module}"
             else:
-                # Try common GTK namespaces
-                logger.debug("No namespace found, trying common GTK namespaces")
-                for ns in ['Gtk', 'GObject', 'GLib']:
-                    try:
-                        logger.debug(f"Trying to require namespace: {ns}")
-                        repo.require(ns, None, 0)
-                        classname = parent_class
-                        namespace = ns
-                        logger.debug(f"Successfully required namespace: {ns}")
-                        break
-                    except Exception as e:
-                        logger.debug(f"Failed to require namespace {ns}: {str(e)}")
-                        continue
-                else:
-                    logger.warning(f"Could not find namespace for {parent_class}, using direct parent")
-                    return [parent_class]
+                # Try common GTK modules
+                import_path = f"gi.repository.{parent_class.split('.')[0]}"
+                classname = parent_class.split('.')[-1]
 
-            # Get the parent type info
-            logger.debug(f"Looking up type info for {classname} in namespace {namespace}")
-            parent_info = repo.find_by_name(namespace, classname)
-            if not parent_info:
-                logger.warning(f"Could not find type info for {parent_class}, using direct parent")
-                return [parent_class]
-
-            # Get the hierarchy using the new method
-            hierarchy = self.get_widget_hierarchy_list(parent_info)
+            # Import the module and get the class
+            module = __import__(import_path, fromlist=[classname])
+            widget_class = getattr(module, classname)
             
-            # Convert to Rust-style type names and filter out empty values
-            rust_hierarchy = [
-                t.replace('Gtk.', 'gtk::')
-                 .replace('GObject.', 'glib::')
-                 .replace('GLib.', 'glib::')
-                for t in reversed(hierarchy)
-                if t  # Filter out empty strings
-            ]
+            # Get the MRO and convert to Rust-style type names
+            rust_hierarchy = []
+            for cls in widget_class.__mro__:
+                if cls.__module__.startswith('gi.repository.'):
+                    # Convert Python module path to Rust-style
+                    module_name = cls.__module__.split('.')[-1].lower()
+                    if module_name == 'gtk':
+                        rust_hierarchy.append(f"gtk::{cls.__name__}")
+                    elif module_name == 'gobject':
+                        rust_hierarchy.append(f"glib::{cls.__name__}")
+                    else:
+                        rust_hierarchy.append(f"{module_name}::{cls.__name__}")
             
-            logger.debug(f"Generated hierarchy for {parent_class}: {rust_hierarchy}")
-            return rust_hierarchy if rust_hierarchy else [parent_class]
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_hierarchy = []
+            for cls in rust_hierarchy:
+                if cls not in seen:
+                    unique_hierarchy.append(cls)
+                    seen.add(cls)
+            
+            logger.debug(f"Generated hierarchy for {parent_class}: {unique_hierarchy}")
+            return unique_hierarchy
             
         except Exception as e:
-            logger.error(f"Error in gobject-introspection for {parent_class}: {str(e)}")
+            logger.error(f"Error getting hierarchy for {parent_class}: {str(e)}")
             logger.debug("Full exception:", exc_info=True)
             return [parent_class]
 
