@@ -412,7 +412,7 @@ impl std::fmt::Debug for {class_name} {{
             {'let ' if signal.params else ''}{', '.join(f'{name} = values[{i+1}].get().expect("Failed to get parameter")' 
                 for i, (name, _) in enumerate(signal.params))};
             let result = f({', '.join(name for name, _ in signal.params)});
-            Some(result.to_value())
+            {'' if return_type == '()' else 'Some(result.to_value())'}
         }})
     }}''')
 
