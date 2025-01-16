@@ -12,9 +12,13 @@ class PropertyType(Enum):
     STRING = auto()
     INT32 = auto()
     UINT32 = auto()
+    INT64 = auto()
+    UINT64 = auto()
+    FLOAT32 = auto()
     FLOAT64 = auto()
     BOOLEAN = auto()
     OBJECT = auto()
+    CUSTOM = auto()  # For user-defined types
 
 @dataclass
 class Property:
@@ -22,6 +26,8 @@ class Property:
     prop_type: PropertyType
     rust_type: str
     default_value: str
+    nullable: bool = False
+    doc: Optional[str] = None
 
 @dataclass
 class Signal:
@@ -38,9 +44,13 @@ class RustGObjectGenerator:
         'str': (PropertyType.STRING, 'String', '""'),
         'i32': (PropertyType.INT32, 'i32', '0'),
         'u32': (PropertyType.UINT32, 'u32', '0'),
+        'i64': (PropertyType.INT64, 'i64', '0'),
+        'u64': (PropertyType.UINT64, 'u64', '0'),
+        'f32': (PropertyType.FLOAT32, 'f32', '0.0'),
         'f64': (PropertyType.FLOAT64, 'f64', '0.0'),
         'bool': (PropertyType.BOOLEAN, 'bool', 'false'),
         'boolean': (PropertyType.BOOLEAN, 'bool', 'false'),
+        'object': (PropertyType.OBJECT, 'glib::Object', 'None'),
     }
 
     def __init__(self):
@@ -128,83 +138,136 @@ impl std::fmt::Debug for {class_name} {{
     def parse_property(self, prop_str: str) -> Property:
         """Parse property string into Property object with validation."""
         try:
-            name, type_str = prop_str.split(':')
+            # Handle optional documentation
+            if '#' in prop_str:
+                prop_str, doc = prop_str.split('#', 1)
+                doc = doc.strip()
+            else:
+                doc = None
+
+            # Split name and type
+            if ':' not in prop_str:
+                raise ValueError("Property must be in format 'name:type'")
+                
+            name, type_str = prop_str.split(':', 1)
+            name = name.strip()
+            type_str = type_str.strip()
             
             if not self.validate_identifier(name):
                 raise ValueError(f"Invalid property name: {name}")
             
-            type_str = type_str.lower()
-            if type_str not in self.TYPE_MAPPING:
-                if type_str.endswith('object'):
-                    # Handle GObject types
-                    return Property(
-                        name=name,
-                        prop_type=PropertyType.OBJECT,
-                        rust_type=type_str.replace('object', 'Object'),
-                        default_value='None'
-                    )
-                raise ValueError(f"Unsupported type: {type_str}")
+            # Handle nullable types
+            nullable = type_str.endswith('?')
+            if nullable:
+                type_str = type_str[:-1]
             
+            # Handle custom types
+            if type_str.lower() not in self.TYPE_MAPPING:
+                # Assume it's a custom type
+                return Property(
+                    name=name,
+                    prop_type=PropertyType.CUSTOM,
+                    rust_type=type_str,
+                    default_value='None' if nullable else f'{type_str}::default()',
+                    nullable=nullable,
+                    doc=doc
+                )
+            
+            # Handle built-in types
+            type_str = type_str.lower()
             prop_type, rust_type, default_value = self.TYPE_MAPPING[type_str]
-            return Property(name=name, prop_type=prop_type, rust_type=rust_type, default_value=default_value)
+            
+            if nullable:
+                rust_type = f'Option<{rust_type}>'
+                default_value = 'None'
+            
+            return Property(
+                name=name,
+                prop_type=prop_type,
+                rust_type=rust_type,
+                default_value=default_value,
+                nullable=nullable,
+                doc=doc
+            )
             
         except ValueError as e:
-            raise ValueError(f"Invalid property format. Expected 'name:type', got '{prop_str}'. {str(e)}")
+            raise ValueError(f"Invalid property format. Expected 'name:type[?] #doc', got '{prop_str}'. {str(e)}")
 
     def parse_signal(self, signal_str: str) -> Signal:
         """Parse signal string into Signal object with validation."""
         try:
+            # Handle return type if present
+            if '->' in signal_str:
+                signal_str, return_type = signal_str.split('->', 1)
+                return_type = return_type.strip()
+            else:
+                return_type = None
+
+            # Handle parameters if present
             if '(' in signal_str:
-                # Signal with parameters
                 name, params_str = signal_str.split('(', 1)
                 params_str = params_str.rstrip(')')
+                name = name.strip()
                 params = []
                 
                 if params_str:
                     for param in params_str.split(','):
                         param = param.strip()
+                        if not param:
+                            continue
                         if ':' in param:
-                            param_name, param_type = param.split(':')
+                            param_name, param_type = param.split(':', 1)
+                            param_name = param_name.strip()
+                            param_type = param_type.strip()
                             if not self.validate_identifier(param_name):
                                 raise ValueError(f"Invalid parameter name: {param_name}")
                             params.append((param_name, param_type))
                         else:
                             raise ValueError(f"Invalid parameter format: {param}")
-                
-                if not self.validate_identifier(name):
-                    raise ValueError(f"Invalid signal name: {name}")
-                    
-                return Signal(name=name, params=params)
             else:
-                # Simple signal without parameters
-                if not self.validate_identifier(signal_str):
-                    raise ValueError(f"Invalid signal name: {signal_str}")
-                return Signal(name=signal_str, params=[])
+                name = signal_str.strip()
+                params = []
+
+            if not self.validate_identifier(name):
+                raise ValueError(f"Invalid signal name: {name}")
+                
+            return Signal(name=name, params=params, return_type=return_type)
                 
         except ValueError as e:
-            raise ValueError(f"Invalid signal format. Expected 'name(param:type,...)' or 'name', got '{signal_str}'. {str(e)}")
+            raise ValueError(f"Invalid signal format. Expected 'name(param:type,...) -> return_type' or 'name', got '{signal_str}'. {str(e)}")
 
     def generate_properties_code(self, properties: List[Property]) -> str:
         """Generate Rust code for properties."""
         prop_lines = []
         for prop in properties:
-            if prop.prop_type == PropertyType.OBJECT:
+            # Add documentation if present
+            if prop.doc:
+                prop_lines.append(f'        /// {prop.doc}')
+            
+            # Handle different property types
+            if prop.prop_type == PropertyType.OBJECT or prop.nullable:
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<Option<{prop.rust_type}>>,')
             else:
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
+        
         return '\n'.join(prop_lines) if prop_lines else '        // No properties defined'
 
     def generate_signals_code(self, signals: List[Signal]) -> str:
         """Generate Rust code for signals."""
         signal_lines = []
         for signal in signals:
+            builder = f'Signal::builder("{signal.name}")'
+            
             if signal.params:
                 params_str = ', '.join(f'("{name}", {type_})' for name, type_ in signal.params)
-                signal_lines.append(f'                Signal::builder("{signal.name}")\n'
-                                 f'                    .param_types([{params_str}])\n'
-                                 f'                    .build(),')
-            else:
-                signal_lines.append(f'                Signal::builder("{signal.name}").build(),')
+                builder += f'\n                    .param_types([{params_str}])'
+            
+            if signal.return_type:
+                builder += f'\n                    .return_type::<{signal.return_type}>()'
+            
+            builder += '\n                    .build(),'
+            signal_lines.append(builder)
+            
         return '\n'.join(signal_lines) if signal_lines else '                // No signals defined'
 
     def generate_additional_methods(self, properties: List[Property], signals: List[Signal]) -> str:
