@@ -72,7 +72,7 @@ mod imp {{
 
     #[derive(Properties, Default, gtk::CompositeTemplate)]
     #[properties(wrapper_type = super::{class_name})]
-    #[template(file = "{}")]
+    #[template(file = "{template_file}")]
     pub struct {class_name} {{
 {properties}
 {template_children}
@@ -400,14 +400,14 @@ impl std::fmt::Debug for {class_name} {{
             parsed_signals = [self.parse_signal(signal) for signal in signals]
 
             # Handle template file path
-            template_path = template_file.replace('\\', '\\\\') if template_file else "template.ui"
+            template_path = template_file.replace('\\', '\\\\') if template_file else ""
 
             # Generate the code
             return self.imp_template.format(
                 class_name=class_name,
                 parent_class=parent_class,
                 additional_imports='\n'.join(additional_imports or []),
-                template_file=template_path,
+                template_file=template_path if template_path else "",
                 template_children=self.generate_template_children(template_children or []),
                 template_callbacks=self.generate_template_callbacks(template_callbacks or []),
                 properties=self.generate_properties_code(parsed_properties),
