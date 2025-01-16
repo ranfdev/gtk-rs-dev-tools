@@ -7,7 +7,8 @@ import re
 import logging
 import gi
 gi.require_version('GIRepository', '2.0')
-from gi.repository import GIRepository
+gi.require_version('GObject', '2.0')
+from gi.repository import GIRepository, GObject
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum, auto
