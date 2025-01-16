@@ -129,7 +129,7 @@ mod imp {{
 
 glib::wrapper! {{
     pub struct {class_name}(ObjectSubclass<imp::{class_name}>)
-        @extends {', '.join(self.get_parent_hierarchy(parent_class))},
+        @extends {', '.join(filter(None, self.get_parent_hierarchy(parent_class)))},
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }}
 
@@ -343,8 +343,24 @@ impl std::fmt::Debug for {class_name} {{
 
     def get_parent_hierarchy(self, parent_class: str) -> List[str]:
         """Get the full parent hierarchy using gobject-introspection."""
+        logger = logging.getLogger(__name__)
         repo = GIRepository.Repository.get_default()
         
+        # Default hierarchy for common GTK classes
+        default_hierarchies = {
+            'gtk::Widget': ['gtk::Widget'],
+            'gtk::Window': ['gtk::Window', 'gtk::Widget'],
+            'gtk::Button': ['gtk::Button', 'gtk::Widget'],
+            'gtk::Box': ['gtk::Box', 'gtk::Widget'],
+            'gtk::Container': ['gtk::Container', 'gtk::Widget'],
+            'gtk::Bin': ['gtk::Bin', 'gtk::Container', 'gtk::Widget'],
+        }
+        
+        # Check if we have a default hierarchy
+        if parent_class in default_hierarchies:
+            logger.debug(f"Using default hierarchy for {parent_class}")
+            return default_hierarchies[parent_class]
+            
         # Try to find the parent class in GIRepository
         try:
             # Remove any namespace prefix if present
@@ -361,28 +377,39 @@ impl std::fmt::Debug for {class_name} {{
                     except:
                         continue
                 else:
+                    logger.warning(f"Could not find namespace for {parent_class}, using direct parent")
                     return [parent_class]
 
             # Get the parent type info
             parent_info = repo.find_by_name(namespace, classname)
             if not parent_info:
+                logger.warning(f"Could not find type info for {parent_class}, using direct parent")
                 return [parent_class]
 
             # Walk up the hierarchy
             hierarchy = []
             current = parent_info
             while current:
-                hierarchy.append(f'{current.get_namespace()}.{current.get_name()}')
+                namespace = current.get_namespace()
+                name = current.get_name()
+                if namespace and name:
+                    hierarchy.append(f'{namespace}.{name}')
                 current = current.get_parent()
             
-            # Convert to Rust-style type names
-            return [t.replace('Gtk.', 'gtk::')
-                       .replace('GObject.', 'glib::')
-                       .replace('GLib.', 'glib::')
-                    for t in reversed(hierarchy)]
+            # Convert to Rust-style type names and filter out empty values
+            rust_hierarchy = [
+                t.replace('Gtk.', 'gtk::')
+                 .replace('GObject.', 'glib::')
+                 .replace('GLib.', 'glib::')
+                for t in reversed(hierarchy)
+                if t  # Filter out empty strings
+            ]
+            
+            logger.debug(f"Generated hierarchy for {parent_class}: {rust_hierarchy}")
+            return rust_hierarchy if rust_hierarchy else [parent_class]
             
         except Exception as e:
-            print(f"Warning: Could not get parent hierarchy for {parent_class}: {e}")
+            logger.warning(f"Could not get parent hierarchy for {parent_class}: {e}")
             return [parent_class]
 
     def generate_code(self, class_name: str, parent_class: str, 
