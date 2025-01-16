@@ -298,21 +298,9 @@ impl std::fmt::Debug for {class_name} {{
             builder = f'Signal::builder("{signal.name}")'
             
             if signal.params:
-                # Map Rust types to their static_type() calls
-                type_map = {
-                    'String': 'String::static_type()',
-                    'i32': 'i32::static_type()',
-                    'u32': 'u32::static_type()',
-                    'i64': 'i64::static_type()',
-                    'u64': 'u64::static_type()',
-                    'f32': 'f32::static_type()',
-                    'f64': 'f64::static_type()',
-                    'bool': 'bool::static_type()',
-                    'glib::Object': 'glib::Object::static_type()',
-                }
-                
+                # Generate static_type() calls for each parameter type
                 params_str = ', '.join(
-                    f'{type_map.get(type_, "glib::Object::static_type()")}'
+                    f'{type_}::static_type()'
                     for _, type_ in signal.params
                 )
                 builder += f'\n                    .param_types([{params_str}])'
