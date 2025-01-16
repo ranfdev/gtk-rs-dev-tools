@@ -534,7 +534,7 @@ impl std::fmt::Debug for {class_name} {{
                 'property_builders': self.generate_property_builders(parsed_properties),
                 'additional_methods': self.generate_additional_methods(parsed_properties, parsed_signals),
                 'debug_fields': self.generate_debug_fields(parsed_properties),
-                'parent_impls': self.generate_parent_impls(self.get_parent_hierarchy(parent_class))
+                'parent_impls': self.generate_parent_impls(self.get_parent_hierarchy(parent_class), class_name)
             }
             
             logger.debug("Format parameters:")
@@ -572,8 +572,13 @@ impl std::fmt::Debug for {class_name} {{
         return '\n'.join(f'            .field("{p.name}", &self.property::<{p.rust_type}>("{p.name}"))'
                         for p in properties)
 
-    def generate_parent_impls(self, parent_hierarchy: List[str]) -> str:
-        """Generate Impl blocks for each parent class in the hierarchy."""
+    def generate_parent_impls(self, parent_hierarchy: List[str], class_name: str) -> str:
+        """Generate Impl blocks for each parent class in the hierarchy.
+        
+        Args:
+            parent_hierarchy: List of parent classes in Rust format (e.g. ["gtk::Widget"])
+            class_name: The name of the class being generated
+        """
         impls = []
         for parent in parent_hierarchy:
             if parent == "gtk::Widget":
