@@ -364,7 +364,9 @@ impl {class_name} {{
         # Generate signal emission methods
         for signal in signals:
             params_str = ', '.join(f'{name}: {type_}' for name, type_ in signal.params)
-            method_name = f"emit_{signal.name}"
+            # Convert hyphens to underscores in method name
+            rust_method_name = signal.name.replace('-', '_')
+            method_name = f"emit_{rust_method_name}"
             if params_str:
                 methods.append(f'''    pub fn {method_name}(&self, {params_str}) {{
         self.emit_by_name::<()>("{signal.name}", &[{', '.join(f'&{n}' for n, _ in signal.params)}]);
@@ -394,7 +396,9 @@ impl {class_name} {{
                     for i, (name, type_) in enumerate(signal.params)
                 )
             
-            methods.append(f'''    pub fn connect_{signal.name}<F: {closure_type}>(&self, f: F) -> glib::SignalHandlerId {{
+            # Convert hyphens to underscores in method name
+            rust_method_name = signal.name.replace('-', '_')
+            methods.append(f'''    pub fn connect_{rust_method_name}<F: {closure_type}>(&self, f: F) -> glib::SignalHandlerId {{
         self.connect_local("{signal.name}", false, move |values| {{
             {''.join(f'{line}\n            ' for line in param_lines)}
             {f'let result = f({", ".join(name for name, _ in signal.params)});' if return_type != '()' else f'f({", ".join(name for name, _ in signal.params)});'}
