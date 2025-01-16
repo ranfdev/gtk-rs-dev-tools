@@ -4,6 +4,9 @@ import os
 import sys
 import argparse
 import re
+import gi
+gi.require_version('GIRepository', '2.0')
+from gi.repository import GIRepository
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -125,7 +128,7 @@ mod imp {{
 
 glib::wrapper! {{
     pub struct {class_name}(ObjectSubclass<imp::{class_name}>)
-        @extends gtk::Widget,
+        @extends {', '.join(self.get_parent_hierarchy(parent_class))},
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }}
 
@@ -336,6 +339,50 @@ impl std::fmt::Debug for {class_name} {{
     }}''')
 
         return '\n\n'.join(methods)
+
+    def get_parent_hierarchy(self, parent_class: str) -> List[str]:
+        """Get the full parent hierarchy using gobject-introspection."""
+        repo = GIRepository.Repository.get_default()
+        
+        # Try to find the parent class in GIRepository
+        try:
+            # Remove any namespace prefix if present
+            if '.' in parent_class:
+                namespace, classname = parent_class.rsplit('.', 1)
+                repo.require(namespace, None, 0)
+            else:
+                # Try common GTK namespaces
+                for ns in ['Gtk', 'GObject', 'GLib']:
+                    try:
+                        repo.require(ns, None, 0)
+                        classname = parent_class
+                        break
+                    except:
+                        continue
+                else:
+                    return [parent_class]
+
+            # Get the parent type info
+            parent_info = repo.find_by_name(namespace, classname)
+            if not parent_info:
+                return [parent_class]
+
+            # Walk up the hierarchy
+            hierarchy = []
+            current = parent_info
+            while current:
+                hierarchy.append(f'{current.get_namespace()}.{current.get_name()}')
+                current = current.get_parent()
+            
+            # Convert to Rust-style type names
+            return [t.replace('Gtk.', 'gtk::')
+                       .replace('GObject.', 'glib::')
+                       .replace('GLib.', 'glib::')
+                    for t in reversed(hierarchy)]
+            
+        except Exception as e:
+            print(f"Warning: Could not get parent hierarchy for {parent_class}: {e}")
+            return [parent_class]
 
     def generate_code(self, class_name: str, parent_class: str, 
                      properties: List[str], signals: List[str], 
