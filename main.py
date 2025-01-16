@@ -122,6 +122,9 @@ mod imp {{
         }}
     }}
 
+    // Generate Impl blocks for each parent class
+    {parent_impls}
+
     #[gtk::template_callbacks]
     impl {class_name} {{
 {template_callbacks}
@@ -530,7 +533,8 @@ impl std::fmt::Debug for {class_name} {{
                 'constructor_params': self.generate_constructor_params(parsed_properties),
                 'property_builders': self.generate_property_builders(parsed_properties),
                 'additional_methods': self.generate_additional_methods(parsed_properties, parsed_signals),
-                'debug_fields': self.generate_debug_fields(parsed_properties)
+                'debug_fields': self.generate_debug_fields(parsed_properties),
+                'parent_impls': self.generate_parent_impls(self.get_parent_hierarchy(parent_class))
             }
             
             logger.debug("Format parameters:")
@@ -567,6 +571,23 @@ impl std::fmt::Debug for {class_name} {{
     def generate_debug_fields(self, properties: List[Property]) -> str:
         return '\n'.join(f'            .field("{p.name}", &self.property::<{p.rust_type}>("{p.name}"))'
                         for p in properties)
+
+    def generate_parent_impls(self, parent_hierarchy: List[str]) -> str:
+        """Generate Impl blocks for each parent class in the hierarchy."""
+        impls = []
+        for parent in parent_hierarchy:
+            if parent == "gtk::Widget":
+                continue  # Already handled by WidgetImpl
+            
+            # Extract the type name without module
+            type_name = parent.split('::')[-1]
+            
+            impl = f'''    impl {type_name}Impl for {type_name} {{
+        // Default implementations that forward to parent
+    }}'''
+            impls.append(impl)
+        
+        return '\n\n'.join(impls)
 
 def main():
     # Configure logging
