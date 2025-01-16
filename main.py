@@ -341,26 +341,56 @@ impl std::fmt::Debug for {class_name} {{
 
         return '\n\n'.join(methods)
 
+    def print_widget_hierarchy(self, widget, indent=0):
+        """
+        Print the complete class hierarchy of a GTK widget using GObject introspection.
+        
+        Args:
+            widget: A GTK widget or GType
+            indent: Current indentation level (used recursively)
+        """
+        if isinstance(widget, GObject.GType):
+            current_type = widget
+        else:
+            current_type = widget.get_type()
+        
+        # Get the name of the current class
+        type_name = current_type.name
+        
+        # Print the current class with proper indentation
+        print("  " * indent + f"└─ {type_name}")
+        
+        # Get parent type
+        parent_type = current_type.parent
+        
+        # Recursively print parent classes until we reach GObject
+        if parent_type and parent_type.name != "GObject":
+            self.print_widget_hierarchy(parent_type, indent + 1)
+
+    def get_widget_hierarchy_list(self, widget):
+        """
+        Return a list of class names in the widget's hierarchy.
+        
+        Args:
+            widget: A GTK widget
+        
+        Returns:
+            list: List of class names in inheritance order
+        """
+        hierarchy = []
+        current_type = widget.get_type()
+        
+        while current_type and current_type.name != "GObject":
+            hierarchy.append(current_type.name)
+            current_type = current_type.parent
+        
+        return hierarchy
+
     def get_parent_hierarchy(self, parent_class: str) -> List[str]:
         """Get the full parent hierarchy using gobject-introspection."""
         logger = logging.getLogger(__name__)
         repo = GIRepository.Repository.get_default()
         
-        # Default hierarchy for common GTK classes
-        default_hierarchies = {
-            'gtk::Widget': ['gtk::Widget'],
-            'gtk::Window': ['gtk::Window', 'gtk::Widget'],
-            'gtk::Button': ['gtk::Button', 'gtk::Widget'],
-            'gtk::Box': ['gtk::Box', 'gtk::Widget'],
-            'gtk::Container': ['gtk::Container', 'gtk::Widget'],
-            'gtk::Bin': ['gtk::Bin', 'gtk::Container', 'gtk::Widget'],
-        }
-        
-        # Check if we have a default hierarchy
-        if parent_class in default_hierarchies:
-            logger.debug(f"Using default hierarchy for {parent_class}")
-            return default_hierarchies[parent_class]
-            
         # Try to find the parent class in GIRepository
         try:
             logger.debug(f"Starting gobject-introspection for {parent_class}")
@@ -407,58 +437,8 @@ impl std::fmt::Debug for {class_name} {{
                 logger.warning(f"Could not find type info for {parent_class}, using direct parent")
                 return [parent_class]
 
-            # Walk up the hierarchy
-            logger.debug("Walking up class hierarchy:")
-            hierarchy = []
-            current = parent_info
-            
-            # Add the initial class
-            namespace = current.get_namespace()
-            name = current.get_name()
-            if namespace and name:
-                logger.debug(f"Found class: {namespace}.{name}")
-                hierarchy.append(f'{namespace}.{name}')
-            
-            # Walk up the inheritance chain
-            while True:
-                try:
-                    # Get the parent type
-                    if not hasattr(current, 'get_parent'):
-                        logger.debug("Current type has no get_parent method")
-                        break
-                        
-                    logger.debug("Getting parent type...")
-                    parent_type = current.get_parent()
-                    if not parent_type:
-                        logger.debug("No parent type found")
-                        break
-                        
-                    logger.debug(f"Parent type: {parent_type}")
-                    logger.debug(f"Parent namespace: {parent_type.get_namespace()}")
-                    logger.debug(f"Parent name: {parent_type.get_name()}")
-                    
-                    # Get the parent info
-                    logger.debug("Looking up parent info...")
-                    parent_info = repo.find_by_name(parent_type.get_namespace(), parent_type.get_name())
-                    if not parent_info:
-                        logger.debug("Could not find parent info in repository")
-                        break
-                        
-                    # Add to hierarchy
-                    namespace = parent_info.get_namespace()
-                    name = parent_info.get_name()
-                    if namespace and name:
-                        logger.debug(f"Found parent: {namespace}.{name}")
-                        hierarchy.append(f'{namespace}.{name}')
-                    else:
-                        logger.debug("Parent has no namespace or name")
-                        
-                    current = parent_info
-                    logger.debug(f"Moving to parent: {namespace}.{name}")
-                except Exception as e:
-                    logger.debug(f"Error walking hierarchy: {str(e)}")
-                    logger.debug("Exception details:", exc_info=True)
-                    break
+            # Get the hierarchy using the new method
+            hierarchy = self.get_widget_hierarchy_list(parent_info)
             
             # Convert to Rust-style type names and filter out empty values
             rust_hierarchy = [
