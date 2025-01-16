@@ -411,30 +411,41 @@ impl std::fmt::Debug for {class_name} {{
             logger.debug("Walking up class hierarchy:")
             hierarchy = []
             current = parent_info
-            while current:
-                namespace = current.get_namespace()
-                name = current.get_name()
-                if namespace and name:
-                    logger.debug(f"Found parent: {namespace}.{name}")
-                    hierarchy.append(f'{namespace}.{name}')
-                
-                # Get parent type using the correct method
+            
+            # Add the initial class
+            namespace = current.get_namespace()
+            name = current.get_name()
+            if namespace and name:
+                logger.debug(f"Found class: {namespace}.{name}")
+                hierarchy.append(f'{namespace}.{name}')
+            
+            # Walk up the inheritance chain
+            while True:
                 try:
-                    if hasattr(current, 'get_parent_type'):
-                        parent_type = current.get_parent_type()
-                        if parent_type:
-                            current = repo.find_by_gtype(parent_type)
-                            if current:
-                                logger.debug(f"Moving to parent: {current.get_namespace()}.{current.get_name()}")
-                            else:
-                                current = None
-                        else:
-                            current = None
-                    else:
-                        current = None
+                    # Get the parent type
+                    if not hasattr(current, 'get_parent'):
+                        break
+                        
+                    parent_type = current.get_parent()
+                    if not parent_type:
+                        break
+                        
+                    # Get the parent info
+                    parent_info = repo.find_by_name(parent_type.get_namespace(), parent_type.get_name())
+                    if not parent_info:
+                        break
+                        
+                    # Add to hierarchy
+                    namespace = parent_info.get_namespace()
+                    name = parent_info.get_name()
+                    if namespace and name:
+                        logger.debug(f"Found parent: {namespace}.{name}")
+                        hierarchy.append(f'{namespace}.{name}')
+                        
+                    current = parent_info
                 except Exception as e:
-                    logger.debug(f"Error getting parent type: {str(e)}")
-                    current = None
+                    logger.debug(f"Error walking hierarchy: {str(e)}")
+                    break
             
             # Convert to Rust-style type names and filter out empty values
             rust_hierarchy = [
