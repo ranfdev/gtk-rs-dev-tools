@@ -307,7 +307,21 @@ impl std::fmt::Debug for {class_name} {{
             
         lines = []
         for child in children:
-            name, type_ = child.split(':')
+            # Handle both simple and Rust-style type paths
+            parts = child.split(':')
+            if len(parts) != 2:
+                raise ValueError(f"Template child must be in format 'name:type', got '{child}'")
+            
+            name = parts[0].strip()
+            type_ = parts[1].strip()
+            
+            # Convert Rust-style type paths to valid Rust code
+            if '::' in type_:
+                # Already in correct format
+                pass
+            else:
+                # Assume it's a GTK type and add gtk:: prefix
+                type_ = f"gtk::{type_}"
             lines.append(f'        #[template_child]\n        pub {name}: TemplateChild<{type_}>,')
 
         return '\n'.join(lines)
