@@ -279,9 +279,14 @@ impl std::fmt::Debug for {class_name} {{
                 prop_lines.append(f'        /// {prop.doc}')
             
             # Handle different property types
-            if prop.prop_type == PropertyType.OBJECT or prop.nullable:
+            if prop.nullable:
+                # For nullable types, we wrap in Option<T> once
+                prop_lines.append(f'        #[property(get, set, nullable)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
+            elif prop.prop_type == PropertyType.OBJECT:
+                # For object types, we wrap in Option<T> since they're nullable by default
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<Option<{prop.rust_type}>>,')
             else:
+                # For non-nullable types
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
         
         return '\n'.join(prop_lines) if prop_lines else '        // No properties defined'
