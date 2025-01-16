@@ -307,21 +307,17 @@ impl std::fmt::Debug for {class_name} {{
             
         lines = []
         for child in children:
-            # Handle both simple and Rust-style type paths
-            parts = child.split(':')
-            if len(parts) != 2:
+            # Split on first colon only to handle Rust-style types
+            if ':' not in child:
                 raise ValueError(f"Template child must be in format 'name:type', got '{child}'")
+                
+            first_colon = child.find(':')
+            name = child[:first_colon].strip()
+            type_ = child[first_colon+1:].strip()
             
-            name = parts[0].strip()
-            type_ = parts[1].strip()
-            
-            # Convert Rust-style type paths to valid Rust code
-            if '::' in type_:
-                # Already in correct format
-                pass
-            else:
-                # Assume it's a GTK type and add gtk:: prefix
-                type_ = f"gtk::{type_}"
+            # Validate the name
+            if not self.validate_identifier(name):
+                raise ValueError(f"Invalid template child name: {name}")
             lines.append(f'        #[template_child]\n        pub {name}: TemplateChild<{type_}>,')
 
         return '\n'.join(lines)
