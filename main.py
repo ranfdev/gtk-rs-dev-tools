@@ -63,6 +63,7 @@ class RustGObjectGenerator:
 // This file is licensed under the same terms as the project it belongs to
 
 use gtk::{{glib, prelude::*, subclass::prelude::*}};
+use adw::subclass::prelude::*;
 use glib::subclass::Signal;
 use glib::Properties;
 use std::cell::RefCell;
@@ -453,6 +454,7 @@ impl std::fmt::Debug for {class_name} {{
                     'gsk': 'Gsk',
                     'pango': 'Pango',
                     'cairo': 'cairo',
+                    'adw': 'Adw',
                 }
                 module = module_map.get(module.lower(), module)
                 import_path = f"gi.repository.{module}"
