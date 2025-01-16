@@ -41,7 +41,7 @@ class Signal:
     return_type: Optional[str] = None
 
 class RustGObjectGenerator:
-    VALID_IDENTIFIER = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
+    VALID_IDENTIFIER = re.compile(r'^[A-Za-z][A-Za-z0-9_-]*$')
     VALID_CLASSNAME = re.compile(r'^[A-Z][A-Za-z0-9]*$')
     
     TYPE_MAPPING = {
@@ -254,8 +254,10 @@ impl {class_name} {{
                 name = signal_str.strip()
                 params = []
 
-            if not self.validate_identifier(name):
-                raise ValueError(f"Invalid signal name: {name}")
+            # Validate the Rust method name (after converting hyphens)
+            rust_method_name = name.replace('-', '_')
+            if not self.validate_identifier(rust_method_name):
+                raise ValueError(f"Invalid signal name (after converting hyphens): {name}")
                 
             return Signal(name=name, params=params, return_type=return_type)
                 
