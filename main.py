@@ -104,9 +104,7 @@ glib::wrapper! {{
 
 impl {class_name} {{
     pub fn new() -> Self {{
-        glib::Object::builder()
-{property_defaults}
-            .build()
+        glib::Object::new()
     }}
 
     pub fn new_with_params({constructor_params}) -> Self {{
@@ -308,7 +306,6 @@ impl std::fmt::Debug for {class_name} {{
                 additional_imports='\n'.join(additional_imports or []),
                 properties=self.generate_properties_code(parsed_properties),
                 signals=self.generate_signals_code(parsed_signals),
-                property_defaults=self.generate_property_defaults(parsed_properties),
                 constructor_params=self.generate_constructor_params(parsed_properties),
                 property_builders=self.generate_property_builders(parsed_properties),
                 additional_methods=self.generate_additional_methods(parsed_properties, parsed_signals),
@@ -317,9 +314,6 @@ impl std::fmt::Debug for {class_name} {{
         except Exception as e:
             raise RuntimeError(f"Error generating code: {str(e)}")
 
-    def generate_property_defaults(self, properties: List[Property]) -> str:
-        return '\n'.join(f'            .property("{p.name}", {p.default_value})' 
-                        for p in properties)
 
     def generate_constructor_params(self, properties: List[Property]) -> str:
         return ', '.join(f'{p.name}: {p.rust_type}' for p in properties)
