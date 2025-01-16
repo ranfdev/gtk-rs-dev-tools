@@ -179,7 +179,6 @@ impl {class_name} {{
                 # Assume it's a custom type
                 return Property(
                     name=name,
-                    prop_type=PropertyType.CUSTOM,
                     rust_type=type_str,
                     default_value='None' if nullable else f'{type_str}::default()',
                     nullable=nullable,
@@ -261,7 +260,7 @@ impl {class_name} {{
             if prop.nullable:
                 # For nullable types, we wrap in Option<T> once
                 prop_lines.append(f'        #[property(get, set, nullable)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
-            elif prop.prop_type == PropertyType.OBJECT:
+            elif 'Object' in prop.rust_type:
                 # For object types, we wrap in Option<T> since they're nullable by default
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<Option<{prop.rust_type}>>,')
             else:
