@@ -21,15 +21,45 @@ A Python script to generate Rust code for GTK/GObject-based widgets with support
    ```
 
 2. Run the generator:
-   ```bash
-   ./main.py MyWidget gtk::Widget \
-       --properties "label:string" "count:i32" \
-       --signals "clicked" "value-changed(new_value:i32)" \
-       --template my_widget.ui \
-       --template-children "button:gtk::Button" \
-       --template-callbacks "on_button_clicked" \
-       output_dir/
-   ```
+
+### Basic Example
+```bash
+./main.py MyWidget gtk::Widget \
+    --properties "label:string" "count:i32" \
+    --signals "clicked" "value-changed(new_value:i32)" \
+    --template my_widget.ui \
+    --template-children "button:gtk::Button" \
+    --template-callbacks "on_button_clicked" \
+    output_dir/
+```
+
+### Example with Nullable Properties
+```bash
+./main.py MyDialog gtk::Dialog \
+    --properties "title:string?" "width:i32" "height:i32" \
+    --signals "closed" "response(response_type:i32) -> bool" \
+    --template dialog.ui \
+    --template-children "header:gtk::HeaderBar" "content:gtk::Box" \
+    output_dir/
+```
+
+### Example with Custom Types
+```bash
+./main.py MyCustomWidget gtk::Widget \
+    --properties "custom_data:MyCustomType?" "enabled:bool" \
+    --signals "data-changed(new_data:MyCustomType)" \
+    --imports "crate::my_custom_type::MyCustomType" \
+    output_dir/
+```
+
+### Example with Complex Signals
+```bash
+./main.py MyComplexWidget gtk::Widget \
+    --properties "value:f64" "description:string?" \
+    --signals "value-changed(new_value:f64, old_value:f64)" \
+              "activated(user_data:glib::Object) -> bool" \
+    output_dir/
+```
 
 ## Command Line Arguments
 
