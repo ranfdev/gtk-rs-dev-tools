@@ -260,9 +260,12 @@ impl {class_name} {{
             if prop.nullable:
                 # For nullable types, we wrap in Option<T> once
                 prop_lines.append(f'        #[property(get, set, nullable)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
-            elif 'Object' in prop.rust_type:
-                # For object types, we wrap in Option<T> since they're nullable by default
+            elif 'Object' in prop.rust_type and prop.nullable:
+                # For nullable object types, we wrap in Option<T>
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<Option<{prop.rust_type}>>,')
+            elif 'Object' in prop.rust_type:
+                # For non-nullable object types
+                prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
             else:
                 # For non-nullable types
                 prop_lines.append(f'        #[property(get, set)]\n        {prop.name}: RefCell<{prop.rust_type}>,')
