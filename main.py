@@ -417,9 +417,24 @@ impl std::fmt::Debug for {class_name} {{
                 if namespace and name:
                     logger.debug(f"Found parent: {namespace}.{name}")
                     hierarchy.append(f'{namespace}.{name}')
-                current = current.get_parent()
-                if current:
-                    logger.debug(f"Moving to parent: {current.get_namespace()}.{current.get_name()}")
+                
+                # Get parent type using the correct method
+                try:
+                    if hasattr(current, 'get_parent_type'):
+                        parent_type = current.get_parent_type()
+                        if parent_type:
+                            current = repo.find_by_gtype(parent_type)
+                            if current:
+                                logger.debug(f"Moving to parent: {current.get_namespace()}.{current.get_name()}")
+                            else:
+                                current = None
+                        else:
+                            current = None
+                    else:
+                        current = None
+                except Exception as e:
+                    logger.debug(f"Error getting parent type: {str(e)}")
+                    current = None
             
             # Convert to Rust-style type names and filter out empty values
             rust_hierarchy = [
