@@ -365,10 +365,22 @@ impl std::fmt::Debug for {class_name} {{
         try:
             logger.debug(f"Starting gobject-introspection for {parent_class}")
             
-            # Remove any namespace prefix if present
-            if '.' in parent_class:
-                namespace, classname = parent_class.rsplit('.', 1)
-                logger.debug(f"Requiring namespace: {namespace}")
+            # Handle Rust-style type names (gtk::TextView -> Gtk.TextView)
+            if '::' in parent_class:
+                namespace, classname = parent_class.split('::', 1)
+                # Convert Rust namespace to GObject namespace
+                namespace = {
+                    'gtk': 'Gtk',
+                    'glib': 'GLib',
+                    'gio': 'Gio',
+                    'gdk': 'Gdk',
+                    'gdk4': 'Gdk',
+                    'gsk': 'Gsk',
+                    'pango': 'Pango',
+                    'cairo': 'cairo',
+                }.get(namespace.lower(), namespace)
+                
+                logger.debug(f"Converted Rust type {parent_class} to GObject type {namespace}.{classname}")
                 repo.require(namespace, None, 0)
             else:
                 # Try common GTK namespaces
