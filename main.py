@@ -427,6 +427,9 @@ impl std::fmt::Debug for {class_name} {{
             return bases
 
         try:
+            # Require GTK 4.0 before importing
+            gi.require_version('Gtk', '4.0')
+            
             # Convert Rust-style type names to Python module paths
             if '::' in parent_class:
                 module, classname = parent_class.split('::', 1)
@@ -453,7 +456,8 @@ impl std::fmt::Debug for {class_name} {{
             widget_class = getattr(module, classname)
             
             # Get the hierarchy using __bases__
-            hierarchy = [f"{module_map.get(module.lower(), module)}::{classname}"]
+            rust_module = parent_class.split('::')[0]  # Get the rust module name
+            hierarchy = [f"{rust_module}::{classname}"]
             hierarchy.extend(get_bases(widget_class))
             
             # Remove duplicates while preserving order
