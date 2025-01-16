@@ -413,7 +413,6 @@ impl std::fmt::Debug for {class_name} {{
                 for i, (name, _) in enumerate(signal.params))};
             let result = f({', '.join(name for name, _ in signal.params)});
             {'' if return_type == '()' else 'Some(result.to_value())'}
-            None
         }})
     }}''')
 
