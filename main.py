@@ -389,6 +389,11 @@ def main():
     parser.add_argument('--properties', nargs='*', help='Properties in format name:type', default=[])
     parser.add_argument('--signals', nargs='*', help='Signal names, optionally with parameters: name(param:type)', default=[])
     parser.add_argument('--imports', nargs='*', help='Additional imports', default=[])
+    parser.add_argument('--template', help='Path to template UI file', default=None)
+    parser.add_argument('--template-children', nargs='*', 
+                       help='Template children in format name:type', default=[])
+    parser.add_argument('--template-callbacks', nargs='*',
+                       help='Template callback methods', default=[])
     parser.add_argument('path', help='Output path for the Rust file')
     
     args = parser.parse_args()
@@ -399,11 +404,14 @@ def main():
 
         # Generate the code
         rust_code = generator.generate_code(
-            args.class_name,
-            args.parent_class,
-            args.properties,
-            args.signals,
-            args.imports
+            class_name=args.class_name,
+            parent_class=args.parent_class,
+            properties=args.properties,
+            signals=args.signals,
+            template_file=args.template,
+            template_children=args.template_children,
+            template_callbacks=args.template_callbacks,
+            additional_imports=args.imports
         )
 
         # Ensure output directory exists
