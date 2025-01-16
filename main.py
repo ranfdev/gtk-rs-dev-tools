@@ -72,7 +72,7 @@ mod imp {{
 
     #[derive(Properties, Default, gtk::CompositeTemplate)]
     #[properties(wrapper_type = super::{class_name})]
-    #[template(file = "{template_file}")]
+    #[template(file = "{}")]
     pub struct {class_name} {{
 {properties}
 {template_children}
