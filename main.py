@@ -368,23 +368,41 @@ impl std::fmt::Debug for {class_name} {{
         if parent_type and parent_type.name != "GObject":
             self.print_widget_hierarchy(parent_type, indent + 1)
 
-    def get_widget_hierarchy_list(self, widget):
+    def get_widget_hierarchy_list(self, info):
         """
         Return a list of class names in the widget's hierarchy.
         
         Args:
-            widget: A GTK widget
+            info: A GIRepository.BaseInfo object
         
         Returns:
             list: List of class names in inheritance order
         """
         hierarchy = []
-        current_type = widget.get_type()
+        current_info = info
         
-        while current_type and current_type.name != "GObject":
-            hierarchy.append(current_type.name)
-            current_type = current_type.parent
-        
+        while current_info:
+            # Get the namespace and name
+            namespace = current_info.get_namespace()
+            name = current_info.get_name()
+            
+            if namespace and name:
+                hierarchy.append(f"{namespace}.{name}")
+            
+            # Get parent info
+            try:
+                parent_type = current_info.get_parent()
+                if not parent_type:
+                    break
+                    
+                current_info = GIRepository.Repository.get_default().find_by_name(
+                    parent_type.get_namespace(),
+                    parent_type.get_name()
+                )
+            except Exception as e:
+                logging.debug(f"Error getting parent info: {str(e)}")
+                break
+                
         return hierarchy
 
     def get_parent_hierarchy(self, parent_class: str) -> List[str]:
