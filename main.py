@@ -363,38 +363,51 @@ impl std::fmt::Debug for {class_name} {{
             
         # Try to find the parent class in GIRepository
         try:
+            logger.debug(f"Starting gobject-introspection for {parent_class}")
+            
             # Remove any namespace prefix if present
             if '.' in parent_class:
                 namespace, classname = parent_class.rsplit('.', 1)
+                logger.debug(f"Requiring namespace: {namespace}")
                 repo.require(namespace, None, 0)
             else:
                 # Try common GTK namespaces
+                logger.debug("No namespace found, trying common GTK namespaces")
                 for ns in ['Gtk', 'GObject', 'GLib']:
                     try:
+                        logger.debug(f"Trying to require namespace: {ns}")
                         repo.require(ns, None, 0)
                         classname = parent_class
+                        namespace = ns
+                        logger.debug(f"Successfully required namespace: {ns}")
                         break
-                    except:
+                    except Exception as e:
+                        logger.debug(f"Failed to require namespace {ns}: {str(e)}")
                         continue
                 else:
                     logger.warning(f"Could not find namespace for {parent_class}, using direct parent")
                     return [parent_class]
 
             # Get the parent type info
+            logger.debug(f"Looking up type info for {classname} in namespace {namespace}")
             parent_info = repo.find_by_name(namespace, classname)
             if not parent_info:
                 logger.warning(f"Could not find type info for {parent_class}, using direct parent")
                 return [parent_class]
 
             # Walk up the hierarchy
+            logger.debug("Walking up class hierarchy:")
             hierarchy = []
             current = parent_info
             while current:
                 namespace = current.get_namespace()
                 name = current.get_name()
                 if namespace and name:
+                    logger.debug(f"Found parent: {namespace}.{name}")
                     hierarchy.append(f'{namespace}.{name}')
                 current = current.get_parent()
+                if current:
+                    logger.debug(f"Moving to parent: {current.get_namespace()}.{current.get_name()}")
             
             # Convert to Rust-style type names and filter out empty values
             rust_hierarchy = [
@@ -409,7 +422,8 @@ impl std::fmt::Debug for {class_name} {{
             return rust_hierarchy if rust_hierarchy else [parent_class]
             
         except Exception as e:
-            logger.warning(f"Could not get parent hierarchy for {parent_class}: {e}")
+            logger.error(f"Error in gobject-introspection for {parent_class}: {str(e)}")
+            logger.debug("Full exception:", exc_info=True)
             return [parent_class]
 
     def generate_code(self, class_name: str, parent_class: str, 
